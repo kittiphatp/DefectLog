@@ -172,7 +172,8 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
   };
 
   const isReadOnly = status && !["Draft", "Open", "In Progress", "Resolved"].includes(status);
-  const isResolutionDisabled = isReadOnly || !status || ["Draft", "Open"].includes(status);
+  const isAssignee = !!defect?.assigned_to && defect.assigned_to === currentUser.id;
+  const isResolutionDisabled = isReadOnly || !status || ["Draft", "Open"].includes(status) || (status === "In Progress" && !isAssignee);
   const showResolutionSection = !!status && !["Draft", "Open"].includes(status);
 
   return (
@@ -379,15 +380,19 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
         {status === "In Progress" && (
           <>
             <button onClick={() => saveDefect(status)} disabled={saving} className="btn-secondary">{saving ? "Saving..." : "Save"}</button>
-            <button onClick={() => setShowRejectModal(true)} disabled={saving} className="btn-danger">Reject</button>
-            <button onClick={() => {
-              const errs = new Set<string>();
-              if (!rootCause) errs.add("rootCause");
-              if (!solution.trim()) errs.add("solution");
-              if (errs.size > 0) { setFieldErrors(errs); setError("Please fill in Root Cause and Solution before resolving."); return; }
-              setFieldErrors(new Set());
-              saveDefect("Resolved");
-            }} disabled={saving} className="btn-success">Resolve</button>
+            {isAssignee && (
+              <button onClick={() => setShowRejectModal(true)} disabled={saving} className="btn-danger">Reject</button>
+            )}
+            {isAssignee && (
+              <button onClick={() => {
+                const errs = new Set<string>();
+                if (!rootCause) errs.add("rootCause");
+                if (!solution.trim()) errs.add("solution");
+                if (errs.size > 0) { setFieldErrors(errs); setError("Please fill in Root Cause and Solution before resolving."); return; }
+                setFieldErrors(new Set());
+                saveDefect("Resolved");
+              }} disabled={saving} className="btn-success">Resolve</button>
+            )}
             {currentUser.id === defect?.created_by && (
               <button onClick={() => setShowCancelModal(true)} disabled={saving}
                 className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">Cancel</button>
