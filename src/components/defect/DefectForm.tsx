@@ -410,7 +410,7 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
             )}
           </>
         )}
-        {status === "Resolved" && (
+        {status === "Resolved" && currentUser.id === defect?.created_by && (
           <>
             <button onClick={handleReopen} disabled={saving}
               className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">
