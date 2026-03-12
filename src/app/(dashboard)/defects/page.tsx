@@ -31,7 +31,7 @@ export default async function DefectsPage({
     .order("created_at", { ascending: false });
 
   if (user.role !== "admin") {
-    dbQuery = dbQuery.or(`created_by.eq.${user.id},assigned_to.eq.${user.id}`);
+    dbQuery = dbQuery.or(`created_by.eq.${user.id},assigned_to.eq.${user.id},assigned_to.is.null`);
   }
 
   if (statusFilter)   dbQuery = dbQuery.eq("status", statusFilter);
