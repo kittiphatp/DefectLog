@@ -199,7 +199,7 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
 
       {/* Header Section */}
       <div className="section-card mb-4">
-        <div className="section-header"><h2 className="font-semibold text-gray-700">Header</h2></div>
+        <div className="section-header"><h2 className="font-semibold text-gray-700">Document Info</h2></div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Created</label>
