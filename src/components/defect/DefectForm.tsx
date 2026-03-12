@@ -388,8 +388,10 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
               setFieldErrors(new Set());
               saveDefect("Resolved");
             }} disabled={saving} className="btn-success">Resolve</button>
-            <button onClick={() => setShowCancelModal(true)} disabled={saving}
-              className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+            {currentUser.id === defect?.created_by && (
+              <button onClick={() => setShowCancelModal(true)} disabled={saving}
+                className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+            )}
           </>
         )}
         {status === "Resolved" && (
