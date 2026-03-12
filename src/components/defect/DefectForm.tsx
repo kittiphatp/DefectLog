@@ -8,7 +8,7 @@ import { SessionUser } from "@/lib/auth";
 import { Defect, DefectFile, ROOT_CAUSE_OPTIONS, MODULE_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, DefectStatus } from "@/lib/types";
 import Modal from "@/components/ui/Modal";
 import Toast, { ToastMessage } from "@/components/ui/Toast";
-import { Paperclip, X, ExternalLink, FileText } from "lucide-react";
+import { Paperclip, X, ExternalLink, FileText, ChevronDown, ChevronUp } from "lucide-react";
 
 interface DefectFormProps {
   defect?: Defect | null;
@@ -40,6 +40,8 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const [descExpanded, setDescExpanded] = useState(true);
+  const [resExpanded, setResExpanded] = useState(true);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [modalReason, setModalReason] = useState("");
@@ -219,8 +221,12 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
 
       {/* Defect Description */}
       <div className="section-card mb-4">
-        <div className="section-header"><h2 className="font-semibold text-gray-700">Defect Description</h2></div>
-        <div className="p-6 space-y-4">
+        <button type="button" onClick={() => setDescExpanded((v) => !v)}
+          className="section-header w-full flex items-center justify-between">
+          <h2 className="font-semibold text-gray-700">Defect Description</h2>
+          {descExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+        </button>
+        {descExpanded && <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Subject <span className="text-red-500">*</span></label>
             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} disabled={!!isReadOnly}
@@ -279,18 +285,22 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
               )}
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Resolution */}
       <div className="section-card mb-6">
-        <div className="section-header flex items-center justify-between">
+        <button type="button" onClick={() => setResExpanded((v) => !v)}
+          className="section-header w-full flex items-center justify-between">
           <h2 className="font-semibold text-gray-700">Resolution</h2>
-          {isResolutionDisabled && !showResolutionSection && (
-            <span className="text-xs text-gray-400 italic">พร้อมใช้งานเมื่อสถานะเป็น In Progress</span>
-          )}
-        </div>
-        {showResolutionSection && <div className="p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            {isResolutionDisabled && !showResolutionSection && (
+              <span className="text-xs text-gray-400 italic">พร้อมใช้งานเมื่อสถานะเป็น In Progress</span>
+            )}
+            {resExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </div>
+        </button>
+        {resExpanded && showResolutionSection && <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
             <p className="text-sm text-gray-800">
@@ -356,6 +366,7 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
       </div>
 
       {/* Action Buttons */}
+
       <div className="flex flex-col gap-3">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center justify-between">
