@@ -173,6 +173,7 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
 
   const isReadOnly = status && !["Draft", "Open", "In Progress", "Resolved"].includes(status);
   const isResolutionDisabled = isReadOnly || !status || ["Draft", "Open"].includes(status);
+  const showResolutionSection = !!status && !["Draft", "Open"].includes(status);
 
   return (
     <div className="max-w-4xl mx-auto p-8">
@@ -284,17 +285,29 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
       <div className="section-card mb-6">
         <div className="section-header flex items-center justify-between">
           <h2 className="font-semibold text-gray-700">Resolution</h2>
-          {isResolutionDisabled && (
+          {isResolutionDisabled && !showResolutionSection && (
             <span className="text-xs text-gray-400 italic">พร้อมใช้งานเมื่อสถานะเป็น In Progress</span>
           )}
         </div>
-        {!isResolutionDisabled && <div className="p-6 space-y-4">
+        {showResolutionSection && <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
             <p className="text-sm text-gray-800">
               {defect?.assigned_user?.email ?? <span className="text-gray-400 italic">— ยังไม่ได้ assign —</span>}
             </p>
           </div>
+          {status === "Rejected" && defect?.rejection_reason && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+              <label className="block text-xs font-semibold text-red-600 uppercase tracking-wider mb-1">Rejection Reason</label>
+              <p className="text-sm text-red-800">{defect.rejection_reason}</p>
+            </div>
+          )}
+          {status === "Cancelled" && defect?.cancellation_reason && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Cancellation Reason</label>
+              <p className="text-sm text-gray-700">{defect.cancellation_reason}</p>
+            </div>
+          )}
           <div>
             <label className={`block text-sm font-medium mb-1 ${fieldErrors.has("rootCause") ? "text-red-600" : "text-gray-700"}`}>Root Cause</label>
             <select value={rootCause} onChange={(e) => { setRootCause(e.target.value); setFieldErrors((p) => { const n = new Set(p); n.delete("rootCause"); return n; }); }} disabled={isResolutionDisabled}
