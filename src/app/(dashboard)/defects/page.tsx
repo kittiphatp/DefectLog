@@ -30,6 +30,10 @@ export default async function DefectsPage({
     .select("*, users!defects_created_by_fkey(email), assigned_user:users!defects_assigned_to_fkey(email)")
     .order("created_at", { ascending: false });
 
+  if (user.role !== "admin") {
+    dbQuery = dbQuery.or(`created_by.eq.${user.id},assigned_to.eq.${user.id}`);
+  }
+
   if (statusFilter)   dbQuery = dbQuery.eq("status", statusFilter);
   if (moduleFilter)   dbQuery = dbQuery.eq("module", moduleFilter);
   if (priorityFilter) dbQuery = dbQuery.eq("priority", priorityFilter);
