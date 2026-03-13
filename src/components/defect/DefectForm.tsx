@@ -180,7 +180,7 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
   const isAssignee = !!defect?.assigned_to && defect.assigned_to === currentUser.id;
   const isReadOnly = !!status && !["Draft", "Open", "In Progress", "Resolved"].includes(status);
   const hasButtons = isNew || status === "Draft" ||
-    (status === "Open" && isCreator) ||
+    status === "Open" ||
     status === "In Progress" ||
     (status === "Resolved" && isCreator);
   const allDisabled = !isNew && !hasButtons;
@@ -397,11 +397,21 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
             <button onClick={() => saveDefect("Open")} disabled={saving} className="btn-primary">{saving ? "Submitting..." : "Submit"}</button>
           </>
         )}
-        {status === "Open" && isCreator && (
+        {status === "Open" && (
           <>
-            <button onClick={() => saveDefect(status)} disabled={saving} className="btn-secondary">{saving ? "Saving..." : "Save"}</button>
-            <button onClick={() => setShowCancelModal(true)} disabled={saving}
-              className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+            {isCreator && (
+              <button onClick={() => saveDefect(status)} disabled={saving} className="btn-secondary">{saving ? "Saving..." : "Save"}</button>
+            )}
+            {!isAssignee && (
+              <button onClick={() => changeStatus("In Progress", { assigned_to: currentUser.id })} disabled={saving}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">
+                {saving ? "Processing..." : "Assign to me"}
+              </button>
+            )}
+            {isCreator && (
+              <button onClick={() => setShowCancelModal(true)} disabled={saving}
+                className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+            )}
           </>
         )}
         {status === "In Progress" && (
