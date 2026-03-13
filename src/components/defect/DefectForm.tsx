@@ -44,6 +44,7 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
   const [resExpanded, setResExpanded] = useState(true);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReopenModal, setShowReopenModal] = useState(false);
   const [modalReason, setModalReason] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
 
@@ -160,22 +161,30 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
     window.location.reload();
   };
 
-  const handleReopen = async () => {
-    setSaving(true);
+  const handleReopen = async (reason: string) => {
+    setModalLoading(true);
     const { data: newDefect, error: insertError } = await supabase
       .from("defects")
-      .insert({ subject: defect!.subject, description: defect!.description, root_cause: defect!.root_cause, solution: defect!.solution, status: "Reopen", created_by: currentUser.id, parent_id: defect!.id })
+      .insert({ subject: defect!.subject, description: defect!.description, module: defect!.module, priority: defect!.priority, root_cause: defect!.root_cause, solution: defect!.solution, status: "Draft", created_by: currentUser.id, parent_id: defect!.id, reopen_reason: reason })
       .select().single();
-    if (insertError) { setError("Failed to reopen."); setSaving(false); return; }
+    if (insertError) { setError("Failed to reopen."); setModalLoading(false); return; }
     await supabase.from("defects").update({ status: "Reopen" }).eq("id", defect!.id);
-    setSaving(false);
+    setModalLoading(false);
+    setShowReopenModal(false);
+    setModalReason("");
     addToast("Reopen สำเร็จ — สร้าง Defect ใหม่แล้ว");
     router.push(`/defects/${newDefect.id}`);
   };
 
-  const isReadOnly = status && !["Draft", "Open", "In Progress", "Resolved"].includes(status);
+  const isCreator = !isNew && currentUser.id === defect?.created_by;
   const isAssignee = !!defect?.assigned_to && defect.assigned_to === currentUser.id;
-  const isResolutionDisabled = isReadOnly || !status || ["Draft", "Open"].includes(status) || (status === "In Progress" && !isAssignee);
+  const isReadOnly = !!status && !["Draft", "Open", "In Progress", "Resolved"].includes(status);
+  const hasButtons = isNew || status === "Draft" ||
+    (status === "Open" && isCreator) ||
+    status === "In Progress" ||
+    (status === "Resolved" && isCreator);
+  const allDisabled = !isNew && !hasButtons;
+  const isResolutionDisabled = isReadOnly || allDisabled || !status || ["Draft", "Open"].includes(status) || (status === "In Progress" && !isAssignee);
   const showResolutionSection = !!status && !["Draft", "Open"].includes(status);
 
   return (
@@ -186,9 +195,9 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
           {!isNew && (
             <div className="flex items-center gap-2 mt-1">
               <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[status!]}`}>{status}</span>
-              {defect?.parent_id && (
-                <Link href={`/defects/${defect.parent_id}`} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                  <ExternalLink className="w-3 h-3" /> View parent defect
+              {defect?.parent_defect && (
+                <Link href={`/defects/${defect.parent_defect.id}`} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3" /> Reopened from: {defect.parent_defect.docno}
                 </Link>
               )}
             </div>
@@ -219,6 +228,13 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
         </div>
       </div>
 
+      {defect?.reopen_reason && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 mb-4">
+          <label className="block text-xs font-semibold text-purple-600 uppercase tracking-wider mb-1">Reopen Reason</label>
+          <p className="text-sm text-purple-800">{defect.reopen_reason}</p>
+        </div>
+      )}
+
       {/* Defect Description */}
       <div className="section-card mb-4">
         <button type="button" onClick={() => setDescExpanded((v) => !v)}
@@ -229,13 +245,13 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
         {descExpanded && <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Subject <span className="text-red-500">*</span></label>
-            <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} disabled={!!isReadOnly}
+            <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} disabled={!!isReadOnly || allDisabled}
               placeholder="Brief description of the defect" className="input-field disabled:bg-gray-50 disabled:text-gray-500" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Module</label>
-              <select value={module} onChange={(e) => setModule(e.target.value)} disabled={!!isReadOnly}
+              <select value={module} onChange={(e) => setModule(e.target.value)} disabled={!!isReadOnly || allDisabled}
                 className="input-field disabled:bg-gray-50 disabled:text-gray-500">
                 <option value="">— Select module —</option>
                 {MODULE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
@@ -243,7 +259,7 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-              <select value={priority} onChange={(e) => setPriority(e.target.value)} disabled={!!isReadOnly}
+              <select value={priority} onChange={(e) => setPriority(e.target.value)} disabled={!!isReadOnly || allDisabled}
                 className="input-field disabled:bg-gray-50 disabled:text-gray-500">
                 <option value="">— Select priority —</option>
                 {PRIORITY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
@@ -252,7 +268,7 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} disabled={!!isReadOnly}
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} disabled={!!isReadOnly || allDisabled}
               rows={4} placeholder="Detailed description..." className="input-field resize-none disabled:bg-gray-50 disabled:text-gray-500" />
           </div>
           {existingDescFiles.length > 0 && (
@@ -262,12 +278,12 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
                 <div key={f.id} className="flex items-center gap-2 text-sm">
                   <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   <a href={getFileUrl(f.file_path)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex-1 truncate">{f.file_name}</a>
-                  {!isReadOnly && <button onClick={() => removeExistingFile(f.id, f.file_path)} className="text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>}
+                  {!isReadOnly && !allDisabled && <button onClick={() => removeExistingFile(f.id, f.file_path)} className="text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>}
                 </div>
               ))}
             </div>
           )}
-          {!isReadOnly && (
+          {!isReadOnly && !allDisabled && (
             <div>
               <input type="file" ref={descFileRef} onChange={(e) => { setDescFiles((p) => [...p, ...Array.from(e.target.files ?? [])]); e.target.value = ""; }} multiple className="hidden" />
               <button type="button" onClick={() => descFileRef.current?.click()} className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800">
@@ -381,7 +397,7 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
             <button onClick={() => saveDefect("Open")} disabled={saving} className="btn-primary">{saving ? "Submitting..." : "Submit"}</button>
           </>
         )}
-        {status === "Open" && currentUser.id === defect?.created_by && (
+        {status === "Open" && isCreator && (
           <>
             <button onClick={() => saveDefect(status)} disabled={saving} className="btn-secondary">{saving ? "Saving..." : "Save"}</button>
             <button onClick={() => setShowCancelModal(true)} disabled={saving}
@@ -404,17 +420,17 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
                 saveDefect("Resolved");
               }} disabled={saving} className="btn-success">Resolve</button>
             )}
-            {currentUser.id === defect?.created_by && (
+            {isCreator && (
               <button onClick={() => setShowCancelModal(true)} disabled={saving}
                 className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">Cancel</button>
             )}
           </>
         )}
-        {status === "Resolved" && currentUser.id === defect?.created_by && (
+        {status === "Resolved" && isCreator && (
           <>
-            <button onClick={handleReopen} disabled={saving}
+            <button onClick={() => setShowReopenModal(true)} disabled={saving}
               className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">
-              {saving ? "Processing..." : "Reopen"}
+              Reopen
             </button>
             <button onClick={() => changeStatus("Completed")} disabled={saving} className="btn-success">Completed</button>
           </>
@@ -444,6 +460,20 @@ export default function DefectForm({ defect, files = [], currentUser }: DefectFo
             <button onClick={() => changeStatus("Cancelled", { cancellation_reason: modalReason })} disabled={!modalReason.trim() || modalLoading}
               className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">
               {modalLoading ? "Cancelling..." : "Confirm Cancel"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {showReopenModal && (
+        <Modal title="Reopen Defect" onClose={() => { setShowReopenModal(false); setModalReason(""); }}>
+          <p className="text-sm text-gray-600 mb-3">Please provide a reason for reopening:</p>
+          <textarea value={modalReason} onChange={(e) => setModalReason(e.target.value)} rows={3} placeholder="Enter reopen reason..." className="input-field mb-4" autoFocus />
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => { setShowReopenModal(false); setModalReason(""); }} className="btn-secondary" disabled={modalLoading}>Back</button>
+            <button onClick={() => handleReopen(modalReason)} disabled={!modalReason.trim() || modalLoading}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50">
+              {modalLoading ? "Processing..." : "Confirm Reopen"}
             </button>
           </div>
         </Modal>

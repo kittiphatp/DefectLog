@@ -34,10 +34,11 @@ export interface Defect {
   updated_at: string;
   rejection_reason: string | null;
   cancellation_reason: string | null;
+  reopen_reason: string | null;
   parent_id: string | null;
   users?: { email: string };
   assigned_user?: { email: string };
-  parent?: Defect;
+  parent_defect?: { id: string; docno: string } | null;
 }
 
 export interface DefectFile {
